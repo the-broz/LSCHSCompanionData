@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel</title>
+</head>
+<body>
+    <form id="startActivity">
+        <input type="text" name="token" placeholder="Enter token" required>
+        <input type="text" name="periodNumber" placeholder="Enter period number" required>
+        <input type="text" name="periodFullTitle" placeholder="Enter period full title like: Period 1." required>
+        <input type="text" name="scheduleType" placeholder="Regular, Community, etc." required>
+        <input type="text" name="letterDay" placeholder="A, B, C, D, etc." required>
+        <input type="text" name="periodEnds" placeholder="Period ending time" required>
+        <button type="submit">Start Activity</button>
+      </form>
+      <form id="modifyActivity" method="post">
+        <input type="text" name="token" placeholder="Enter token" required>
+        <input type="text" name="periodNumber" placeholder="Enter period number" required>
+        <input type="text" name="periodFullTitle" placeholder="Enter period full title like: Period 1." required>
+        <input type="text" name="periodEnds" value="${currentTime}" required>
+        <button type="submit">Update Activity</button>
+      </form>
+      <script>
+  document.getElementById('startActivity').addEventListener('submit', function(e) {
+    e.preventDefault();
+  
+    const data = {
+      token: this.elements.token.value,
+      periodNumber: this.elements.periodNumber.value,
+      periodFullTitle: this.elements.periodFullTitle.value,
+      scheduleType: this.elements.scheduleType.value,
+      letterDay: this.elements.letterDay.value,
+      periodEnds: this.elements.periodEnds.value
+    };
+  
+    fetch('/startActivity', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch((error) => {
+      console.error('Error:', error);
+    });
+  });
+  document.getElementById('modifyActivity').addEventListener('submit', function(e) {
+    e.preventDefault();
+  
+    const data = {
+      token: this.elements.token.value,
+      periodNumber: this.elements.periodNumber.value,
+      periodFullTitle: this.elements.periodFullTitle.value,
+      periodEnds: this.elements.periodEnds.value
+    };
+  
+    fetch('/modifyActivity', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch((error) => {
+      console.error('Error:', error);
+    });
+  });
+  </script>
+</body>
+</html>

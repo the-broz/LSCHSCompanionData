@@ -1,0 +1,19 @@
+{
+  "name": "lschscompaniondata",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@parse/node-apn": "^6.0.1",
+    "cheerio": "^1.0.0-rc.12",
+    "express": "^4.18.3",
+    "imap": "^0.8.19",
+    "path": "^0.12.7"
+  }
+}
