@@ -22,6 +22,19 @@
         <input type="text" name="periodEnds" value="${currentTime}" required>
         <button type="submit">Update Activity</button>
       </form>
+      <form id="endActivity" method="post">
+        <input type="text" name="token" placeholder="Enter token" required>
+        <input type="text" name="periodNumber" placeholder="Period 6" required>
+        <input type="text" name="periodFullTitle" placeholder="Enter period full title like: Period 1." required>
+        <button type="submit">End Activty</button>
+      </form>
+      <form id="sendPush" method="post">
+        <input type="text" name="token" placeholder="Enter token" required>
+        <input type="text" name="title" placeholder="Title Text" required>
+        <input type="text" name="subtitle" placeholder="Subtitle Text (Optional)">
+        <input type="text" name="body" placeholder="Body Text" required>
+        <button type="submit">Send Notification To ALL!!!</button>
+      </form>
       <script>
   document.getElementById('startActivity').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -59,6 +72,29 @@
     };
   
     fetch('/modifyActivity', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch((error) => {
+      console.error('Error:', error);
+    });
+  });
+  document.getElementById('sendPush').addEventListener('submit', function(e) {
+    e.preventDefault();
+  
+    const data = {
+      token: this.elements.token.value,
+      title: this.elements.title.value,
+      subtitle: this.elements.subtitle.value,
+      body: this.elements.body.value
+    };
+  
+    fetch('/sendPush', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

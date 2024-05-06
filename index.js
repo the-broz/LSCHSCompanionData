@@ -21,7 +21,7 @@ var apnProvider = new apn.Provider(options);
     res.setHeader('Access-Control-Allow-Origin', '*');
 })*/
 
-function print(...messages) {
+print = (...messages) => {
   const message = messages.join(' ');
   console.log(message);
 
@@ -67,6 +67,25 @@ app.post('/deviceRegistar/', (req, res) => {
   console.log(req.body.deviceToken,"was registered to server.");
 })
 
+app.post('/deviceRegistar/push', (req, res) => {
+  console.log('registering device for push notifs')
+  if (req.body.deviceToken == "DEVICE TOKEN NOT FOUND") {
+    console.log("Device token not found.")
+    res.json({message: "Error"})
+    return
+  }
+  const deviceData = JSON.parse(fs.readFileSync('./public/pushnotifs.json', 'utf8'));
+  if (deviceData.includes(req.body.deviceToken)) {
+    res.json({message: "Device already registered."})
+    console.log("device already registered",req.body.deviceToken);
+    return
+  }
+  deviceData.push(req.body.deviceToken);
+  fs.writeFileSync('./public/pushnotifs.json', JSON.stringify(deviceData));
+  res.json({message: 'Device registered successfully.'})
+  console.log(req.body.deviceToken,"was registered to server.");
+})
+
 app.post('/registerActivity/', (req,res) => {
   if (req.body.activityToken == ""){
     console.log("Activity token not found.")
@@ -96,17 +115,17 @@ const admininstrationTokens = [
   {
     assigned: "csongardi",
     token: "csongardicisprettyawesome",
-    permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY"]
+    permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY", "PUSH.SEND"]
   },
   {
     assigned: "mchutchison",
     token: "microsoftskypesoundeffect",
-    permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY"]
+    permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY", "PUSH.SEND"]
   },
   {
     assigned: "sabatino",
     token: "799ae0d9",
-    permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY"]
+    permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY", "PUSH.SEND"]
   },
   {
     assigned: "roman",
@@ -114,6 +133,10 @@ const admininstrationTokens = [
     permissions: ["ACTIVITY.START", "ACTIVITY.MODIFY"]
   },
 ]
+var lastSchedule = {
+  type: undefined,
+  letterDay: undefined
+}
 
 app.post('/startActivity', (req, res) => {
   // Clear registeredwidgets.json
@@ -138,13 +161,15 @@ const date = new Date(dateTimeString);
   }
   console.log(new Date().toISOString(),"ACCESS LOG:",adminToken.assigned || "Someone","successfully started an activity.")
   // Loop through the deviceData array
+  lastSchedule.letterDay = letterDay
+  lastSchedule.type = scheduleType
   for (let i = 0; i < deviceData.length; i++) {
     const deviceToken = deviceData[i];
     // Send a push notification to the device
     var note = new apn.Notification();
 note.topic = "me.thebroz.LSCHSCompanion.push-type.liveactivity";
 note.pushType = "liveactivity";
-note.priority = 5;
+note.priority = 10;
 note.rawPayload = {
   aps: {
     timestamp: Math.floor(Date.now() / 1000),
@@ -175,6 +200,48 @@ note.rawPayload = {
   res.json({ message: 'Activity started successfully.' });
 });
 
+app.post('/sendPush', (req, res) => {
+  // Clear registeredwidgets.json
+  //fs.writeFileSync('./public/registeredwidgets.json', JSON.stringify([]));
+
+  // Read device.json
+  const deviceData = JSON.parse(fs.readFileSync('./public/pushnotifs.json', 'utf8'));
+
+  // Update periodNumber and periodFullTitle
+  const { title, subtitle, token, body } = req.body;
+  // Do something with periodNumber and periodFullTitle
+  // Check if the token has permissions to start an activity
+  console.log(token,req.body)
+  const adminToken = admininstrationTokens.find(admin => admin.token === token);
+  if (!adminToken || !adminToken.permissions.includes("PUSH.SEND")) {
+    res.json({ message: 'Unauthorized to send push.' });
+    //print(new Date().toISOString(),"ACCESS LOG:",adminToken.assigned || "Someone","attempted to start an activity but it failed due to lack of permissions.")
+    return;
+  }
+  console.log(new Date().toISOString(),"ACCESS LOG:",adminToken.assigned || "Someone","successfully send a push notification.")
+  // Loop through the deviceData array
+  for (let i = 0; i < deviceData.length; i++) {
+    const deviceToken = deviceData[i];
+    // Send a push notification to the device
+    var note = new apn.Notification();
+note.topic = "me.thebroz.LSCHSCompanion";
+note.sound = "default"
+note.alert = {
+  title: title,
+  subtitle: subtitle,
+  body: body
+}
+
+
+    apnProvider.send(note, deviceToken).then(result => {
+      console.log(result.failed);
+      console.log(result.sent)
+    });
+  }
+  console.log("success wowzers")
+  res.json({ message: 'Push send successfully.' });
+});
+
 app.post('/modifyActivity', (req,res) => {
   const deviceData = JSON.parse(fs.readFileSync('./public/registeredwidgets.json', 'utf8'));
 
@@ -187,12 +254,12 @@ const date = new Date(dateTimeString);
   // Check if the token has permissions to start an activity
   console.log(token,req.body)
   const adminToken = admininstrationTokens.find(admin => admin.token === token);
-  if (!adminToken || !adminToken.permissions.includes("ACTIVITY.START")) {
-    res.json({ message: 'Unauthorized to start activity.' });
+  if (!adminToken || !adminToken.permissions.includes("ACTIVITY.MODIFY")) {
+    res.json({ message: 'Unauthorized to modify activity.' });
     //print(new Date().toISOString(),"ACCESS LOG:",adminToken.assigned || "Someone","attempted to start an activity but it failed due to lack of permissions.")
     return;
   }
-  console.log(new Date().toISOString(),"ACCESS LOG:",adminToken.assigned || "Someone","successfully started an activity.")
+  console.log(new Date().toISOString(),"ACCESS LOG:",adminToken.assigned || "Someone","successfully modified an activity.")
   // Loop through the deviceData array
   for (let i = 0; i < deviceData.length; i++) {
     const deviceToken = deviceData[i];
@@ -200,15 +267,19 @@ const date = new Date(dateTimeString);
     var note = new apn.Notification();
 note.topic = "me.thebroz.LSCHSCompanion.push-type.liveactivity";
 note.pushType = "liveactivity";
-note.priority = 5;
+note.priority = 10;
+
 note.rawPayload = {
   aps: {
     timestamp: Math.floor(Date.now() / 1000),
+    "stale-date": (date.getTime()/1000),
     event: "update",
     "content-state": {
       period: periodNumber,
       longPeriod: periodFullTitle.toUpperCase(),
-      timeEnds: ""+(date.getTime()/1000)+"",
+      timeEnds: (date.getTime()/1000).toString(),
+      letterDay: lastSchedule.letterDay,
+      scheduleType: lastSchedule.type
     },
     "attributes-type": "DayActivityAttributes",
     attributes: {},
@@ -219,10 +290,19 @@ note.rawPayload = {
     sound: "default"
   }
 }
-
+    console.log(note.compile())
     apnProvider.send(note, deviceToken).then(result => {
       console.log(result.failed);
-      console.log(result.sent)
+      if (result.failed.length > 0) {
+        if (result.failed[0].response.reason == "BadDeviceToken") {
+          const index = deviceData.indexOf(deviceToken);
+          if (index > -1) {
+            deviceData.splice(index, 1);
+            fs.writeFileSync('./public/device.json', JSON.stringify(deviceData));
+          }
+        }
+      }
+      console.log(result.sent);
     });
   }
   console.log("success wowzers")
